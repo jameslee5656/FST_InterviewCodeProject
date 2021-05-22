@@ -1,0 +1,16 @@
+DELIMITER $$
+CREATE DEFINER=`fstadmin`@`localhost` PROCEDURE `sp_validateLogin`(
+    IN p_name VARCHAR(20)
+)
+BEGIN
+    select * from fst_user where user_name = p_name;
+END$$
+DELIMITER ;
+
+## Grant Procedure privilege for fstadmin 
+GRANT EXECUTE ON PROCEDURE sp_validateLogin TO 'fstadmin'@'localhost';
+flush privileges;
+
+## Delete Porcedure
+DROP PROCEDURE <stored procedure name>;  
+DROP PROCEDURE sp_validateLogin;

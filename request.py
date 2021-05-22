@@ -23,9 +23,14 @@ data = dict(
     user='fstadmin',
     password='P@ssw0rdJames'
 )
+data = dict(
+    user='fstuser1',
+    password='P@ssw0rdJames'
+)
 # Test signup function
 s2 = requests.Session()
 # response0 = s2.post('http://127.0.0.1:5000/signup', json=data)
 # print(response0, response0.text)
-
+response1 = s2.get('http://127.0.0.1:5000/login', json=data)
+print(response1, response1.text)
 ## After signup New Login procedure
