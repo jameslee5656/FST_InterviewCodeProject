@@ -1,0 +1,48 @@
+-u username:password 
+curl -u fstadmin:P@ssw0rdJames http://127.0.0.1:5000/login
+
+create table `fst_user` (
+    user_id BIGINT  AUTO_INCREMENT,
+    user_name VARCHAR(45) NULL,
+    user_password VARCHAR(45) NULL,
+    PRIMARY KEY (user_id));
+
+ALTER TABLE fst_user ALTER COLUMN user_password VARCHAR (300) NOT NULL;
+
+GRANT SELECT, INSERT, DELETE ON fst.* TO 'fstadmin'@'localhost';
+GRANT EXECUTE ON PROCEDURE sp_createUser TO 'fstadmin'@'localhost';
+flush privileges;
+
+
+## Create User Procedure
+DELIMITER $$
+CREATE DEFINER=`fstadmin`@`localhost` PROCEDURE `sp_createUser`(
+    IN p_name VARCHAR(20),
+    IN p_password VARCHAR(300)
+)
+BEGIN
+    if ( select exists (select 1 from fst_user where user_name = p_name) ) THEN
+     
+        select 'Username Exists !!';
+     
+    ELSE
+     
+        insert into fst_user
+        (
+            user_name,
+            user_password
+        )
+        values
+        (
+            p_name,
+            p_password
+        );
+     
+    END IF;
+END$$
+DELIMITER ;
+
+
+## Delete Porcedure
+DROP PROCEDURE <stored procedure name>;  
+DROP PROCEDURE sp_createUser;
