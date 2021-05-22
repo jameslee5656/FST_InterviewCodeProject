@@ -1,0 +1,15 @@
+with closing(mysql.connect() ) as conn:
+	with closing( conn.cursor() ) as cursor:
+		cursor.execute("SELECT * FROM fst_user where user_name = %s ","fstadmin")
+		data = cursor.fetchall()
+		print(data)
+		cursor.callproc('sp_createAsset',(data[0][0],))
+		conn.commit()
+
+with closing(mysql.connect() ) as conn:
+	with closing( conn.cursor() ) as cursor:
+		cursor.execute("SELECT * FROM fst_user where user_name = %s ","fstuser1")
+		data = cursor.fetchall()
+		print(data)
+		cursor.callproc('sp_createAsset',(data[0][0],))
+		conn.commit()

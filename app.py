@@ -6,6 +6,7 @@ import json,cryptography
 from werkzeug.security import generate_password_hash, check_password_hash
 from contextlib import closing
 from six import text_type
+from datetime import date, datetime
 
 app = Flask(__name__)
 
@@ -100,7 +101,12 @@ def signup():
                         "response":"All fields good !!"
                     }
                     _hashed_password = generate_password_hash(_password)
-                    cursor.callproc('sp_createUser',(_name,_hashed_password))
+                    cursor.callproc('sp_createUser',(_name,_hashed_password))      
+                    cursor.execute("SELECT * FROM fst_user where user_name = %s " % (_name))
+                    data = cursor.fetchall()
+                    if(len(data) != 1):
+                        print("Error: name conflict")
+                    cursor.callproc('sp_createAsset',(data[0][0],))
                     data = cursor.fetchall()
         
                     if len(data) == 0:
@@ -114,7 +120,6 @@ def signup():
                             "response":'Error' + str(data[0])
                         }
                         return response_self(data)
-                    return response_self(data)
                 else:
                     data={
                         "response":"Json data error"
@@ -169,12 +174,6 @@ def login():
                     }
                     return response_self(data)
                     
-        print(request.args['user'])
-        username = request.args['user']  
-        print(request.args['password'] == users[username]['password'])
-        if request.args['password'] == users[username]['password']:  
-           
-            return redirect(url_for('view'))  
     return 'Bad login'  
   
   
@@ -185,11 +184,35 @@ def userHome():
  在login_user(user)之後，我們就可以透過current_user.id來取得用戶的相關資訊了  
  """   
     #  current_user確實的取得了登錄狀態
-    print("Debug Here-------")
-    print(current_user.is_active)
     if current_user.is_active:  
         # d = make_summary()
         # data = make_summary()
+        data={
+            "user_id":current_user.id,
+            "Login_is_active":True,
+            "Available Action":["/userHome/view",
+                                {"/userHome/buy":["cardType","num","$perCard"]},
+                                {"/userHome/sell":["cardType","num","$perCard"]}]
+        }
+        response = app.response_class(
+            response=json.dumps(data),
+            status=200,
+            mimetype='application/json'
+        )
+        return response
+        # return 'Logged in as: ' + current_user.id + 'Login is_active:True'
+
+@app.route('/userHome/view')  
+@login_required
+def view():  
+    """  
+ 在login_user(user)之後，我們就可以透過current_user.id來取得用戶的相關資訊了  
+ """   
+    #  current_user確實的取得了登錄狀態
+    if current_user.is_active:  
+        # d = make_summary()
+        # orderInfo = request.json
+        # print(orderInfo)
         data={
             "user":current_user.id,
             "Login_is_active":True
@@ -201,14 +224,44 @@ def userHome():
         )
         return response
         # return 'Logged in as: ' + current_user.id + 'Login is_active:True'
-        
-@app.route('/buy')  
+
+@app.route('/userHome/buy')
 @login_required
 def buy():  
-    if current_user.is_active:  
+    if current_user.is_active:
+        orderInfo = request.json
+        print(orderInfo)
+        timestamp = datetime.timestamp(datetime.now())
+        user_id = current_user.id
+        orderType = "buy"
+        with closing(mysql.connect() ) as conn:
+            with closing( conn.cursor()) as cursor:
+                # check order that intended to sell
+                cursor.execute("SELECT * FROM orders where status = %s and orderType = %s " % ("\'pending\'", "\'sell\'"))
+                data = cursor.fetchall()
+                print(data)
+                if data == None:
+                    status = "pending"
+                    cursor.callproc('sp_createOrders',(orderInfo['cardInfo'],orderInfo['num'],orderInfo['$perCard'],
+                                                        timestamp, user_id, status, orderType))
+                else :
+                    print("hello world")
+                    
+                
+        # status = 'pending'
         data={
             "user":current_user.id,
             "Login_is_active":True
+        }
+        response = app.response_class(
+            response=json.dumps(data),
+            status=200,
+            mimetype='application/json'
+        )
+        return response
+    else:
+        data={
+            "response":"Please login before buy action"
         }
         response = app.response_class(
             response=json.dumps(data),

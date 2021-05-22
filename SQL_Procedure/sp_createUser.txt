@@ -10,7 +10,6 @@ BEGIN
         select 'Username Exists !!';
      
     ELSE
-     
         insert into fst_user
         (
             user_name,

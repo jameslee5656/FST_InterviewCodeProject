@@ -1,0 +1,42 @@
+## Create User Procedure
+DELIMITER $$
+CREATE DEFINER=`fstadmin`@`localhost` PROCEDURE `sp_createOrders`(
+    IN p_cardType VARCHAR(45),
+    IN p_num BIGINT,
+    IN p_monPerCard BIGINT,
+    IN p_timestamp FLOAT,
+    IN p_user_id BIGINT,
+    IN p_status VARCHAR(45),
+    IN p_orderType VARCHAR(45)
+)
+BEGIN
+    insert into orders
+    (
+        cardType,
+        num,
+        monPerCard,
+        timestamp, 
+        user_id,
+        status,
+        orderType
+    )
+    values
+    (
+        p_cardType,
+        p_num,
+        p_monPerCard, 
+        p_timestamp,
+        p_user_id,
+        p_status,
+        p_orderType
+    );
+END$$
+DELIMITER ;
+
+## Grant Procedure privilege for fstadmin 
+GRANT EXECUTE ON PROCEDURE sp_createOrders TO 'fstadmin'@'localhost';
+flush privileges;
+
+## Delete Porcedure
+DROP PROCEDURE <stored procedure name>;  
+DROP PROCEDURE sp_createAsset;

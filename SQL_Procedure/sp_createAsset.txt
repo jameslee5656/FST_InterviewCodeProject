@@ -1,0 +1,30 @@
+## Create User Procedure
+DELIMITER $$
+CREATE DEFINER=`fstadmin`@`localhost` PROCEDURE `sp_createAsset`(
+    IN p_user_id BIGINT
+)
+BEGIN
+    if ( select exists (select 1 from asset where user_id = p_user_id) ) THEN
+        select 'user_id Exists !!';
+     
+    ELSE
+        insert into asset
+        (
+            user_id
+        )
+        values
+        (
+            p_user_id
+        );
+     
+    END IF;
+END$$
+DELIMITER ;
+
+## Grant Procedure privilege for fstadmin 
+GRANT EXECUTE ON PROCEDURE sp_createAsset TO 'fstadmin'@'localhost';
+flush privileges;
+
+## Delete Porcedure
+DROP PROCEDURE <stored procedure name>;  
+DROP PROCEDURE sp_createAsset;
