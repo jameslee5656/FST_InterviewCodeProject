@@ -28,3 +28,4 @@ DELIMITER ;
 ## Grant Procedure privilege for fstadmin 
 GRANT EXECUTE ON PROCEDURE sp_createUser TO 'fstadmin'@'localhost';
 flush privileges;
+

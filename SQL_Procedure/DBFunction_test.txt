@@ -1,0 +1,31 @@
+
+
+
+from flaskext.mysql import MySQL
+from flask import Flask, url_for, request, redirect, render_template  
+from flask_login import LoginManager, UserMixin, login_user, current_user, login_required, logout_user
+from flask_httpauth import HTTPBasicAuth
+import json,cryptography
+from werkzeug.security import generate_password_hash, check_password_hash
+from contextlib import closing
+from six import text_type
+from datetime import date, datetime
+import sys
+
+app = Flask(__name__)
+
+## MySQL initial function
+mysql = MySQL()
+app.config['MYSQL_DATABASE_USER'] = 'fstadmin'
+app.config['MYSQL_DATABASE_PASSWORD'] = 'P@ssw0rdJames'
+app.config['MYSQL_DATABASE_DB'] = 'FST'
+app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+mysql.init_app(app)
+with closing(mysql.connect() ) as conn:
+    with closing( conn.cursor() ) as cursor:
+        data = cursor.execute("UPDATE asset SET pikachu = pikachu - 1," +
+                                           "    balance = balance - 5 " +
+                                    "where user_id = 1" )
+        print(data)
+        cursor.callproc('sp_createAsset',(data[0][0],))
+        conn.commit()

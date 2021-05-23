@@ -7,9 +7,10 @@ CREATE DEFINER=`fstadmin`@`localhost` PROCEDURE `sp_createOrders`(
     IN p_timestamp FLOAT,
     IN p_user_id BIGINT,
     IN p_status VARCHAR(45),
-    IN p_orderType VARCHAR(45)
+    IN p_orderType VARCHAR(45),
+    IN p_referID BIGINT
 )
-BEGIN
+BEGIN  
     insert into orders
     (
         cardType,
@@ -18,7 +19,8 @@ BEGIN
         timestamp, 
         user_id,
         status,
-        orderType
+        orderType,
+        referId
     )
     values
     (
@@ -28,10 +30,17 @@ BEGIN
         p_timestamp,
         p_user_id,
         p_status,
-        p_orderType
+        p_orderType,
+        p_referID
+
     );
+    
 END$$
 DELIMITER ;
+
+# Note 
+SET p_newId = LAST_INSERT_ID() ;
+
 
 ## Grant Procedure privilege for fstadmin 
 GRANT EXECUTE ON PROCEDURE sp_createOrders TO 'fstadmin'@'localhost';
@@ -39,4 +48,7 @@ flush privileges;
 
 ## Delete Porcedure
 DROP PROCEDURE <stored procedure name>;  
-DROP PROCEDURE sp_createAsset;
+DROP PROCEDURE sp_createOrders;
+
+GRANT EXECUTE ON FUNCTION scope_identity TO 'fstadmin'@'localhost';
+flush privileges;

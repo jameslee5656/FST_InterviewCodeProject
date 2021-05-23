@@ -1,4 +1,8 @@
 import requests
+from random import seed
+from random import random,randint
+
+
 
 users = {'fstadmin@localhost': {'password': 'P@ssw0rdJames'}}  
 params = dict(
@@ -42,15 +46,31 @@ data = dict(
     user='fstuser2',
     password='P@ssw0rdJames'
 )
-
 ## Test Buy opeation
 cardType = ["pikachu", "bulbasaur", "charmander","squirtle"]
 data = {
     "cardType":cardType[0],
-    "num":5,
-    '$perCard':10
+    "num":1,
+    '$perCard':randint(5, 20)
 }
 response2 = s2.get('http://127.0.0.1:5000/userHome/buy', json=data)
 print(response2, response2.text)
 
+print("----------Session 3 ------------")
+## New session for a seller
+
+s3 = requests.Session()
+data = dict(
+    user='fstuser1',
+    password='P@ssw0rdJames'
+)
+response1 = s3.get('http://127.0.0.1:5000/login', json=data)
+print(response1, response1.text)
+data = {
+    "cardType":cardType[0],
+    "num":1,
+    '$perCard':5
+}
+response2 = s3.get('http://127.0.0.1:5000/userHome/sell', json=data)
+print(response2, response2.text)
 ## After signup New Login procedure
