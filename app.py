@@ -232,7 +232,6 @@ def view():
 def buy():  
     if current_user.is_active:
         orderInfo = request.json
-        print(orderInfo)
         timestamp = datetime.timestamp(datetime.now())
         user_id = current_user.id
         orderType = "buy"
@@ -240,27 +239,20 @@ def buy():
             with closing( conn.cursor()) as cursor:
                 # check order that intended to sell
                 cursor.execute("SELECT * FROM orders where status = %s and orderType = %s " % ("\'pending\'", "\'sell\'"))
-                SellPending = cursor.fetchall()
+                BuyPending = cursor.fetchall()
                 # print(data)
-                if len(SellPending) == 0:
-                    # The card does not have sellter yet
+                if len(BuyPending) == 0:
+                    # The card does not have buyer yet
                     status = "pending"
                     try:
                         referId = None
                         cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
                                                         timestamp, user_id, status, orderType,referId))
-                        # The order is pending
-                        # cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance - %s WHERE user_id = %s ;" 
-                        #             % (orderInfo['cardType'],orderInfo['cardType'], orderInfo['num'],
-                        #                 orderInfo['num']*orderInfo['$perCard'],
-                        #                 user_id))
-                        # data = cursor.fetchall()
 
                         conn.commit()
                         cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
                         data = cursor.fetchall()
                         order_id = data[0][0]
-                        print("Debug: ", order_id)
 
                         data={
                             "response":'Create Order successfully !',
@@ -274,17 +266,127 @@ def buy():
                         }
                         return response_self(data)                       
                 else :
-                    # The card has seller
-                    print("The card has seller")
-                    print(SellPending)
+                    # The card has a seller                    
+                    try:
+                        num = orderInfo['num']
+                        # Make sure our order is finished and BuyPending still has value
+                        while( (num != 0) and (len(BuyPending) != 0)):
+                            sellerTuple = min(BuyPending, key=itemgetter(3))
+                            sellerTupleNum = sellerTuple[2]
+                            sellerTupleId = sellerTuple[5]
+                            sellerTupleMonPerCard = sellerTuple[3]
+                            # if else max find or not
+                            if sellerTupleNum >= num:
+                                # Update the seller in sell function
+                                ordernumber = num
+                                leaveflag = True
+                                num = 0
+                            else:
+                                leaveflag = False
+                                ordernumber = sellerTupleNum
+                                num -= sellerTupleNum
 
-                    ## Need adjust and coding
-                    # status = 'pending'
-                    data={
-                        "user":current_user.id,
-                        "Login_is_active":True
-                    }
-                    return response_self(data)
+                            #### <whole proccess function Start> 
+                            # Create a completed order    
+                            status = "completed"
+
+                            #### ------ Here has a problem how to decide the price ------ #
+                            # Update the buyer in buy function
+                            cursor.execute("UPDATE asset SET %s = %s + %s, balance = balance - %s WHERE user_id = %s ;" 
+                                    % (orderInfo['cardType'],orderInfo['cardType'], ordernumber,
+                                        orderInfo['num']*sellerTupleMonPerCard,
+                                        user_id))
+
+                            # Update the buyer in buy function
+                            cursor.execute("UPDATE asset SET %s = %s + %s, balance = balance - %s WHERE user_id = %s ;" 
+                                    % (orderInfo['cardType'],orderInfo['cardType'], num,
+                                        orderInfo['num']*sellerTupleMonPerCard,
+                                        sellerTupleId))
+                            referID = sellerTuple[0]
+                            # Create a sell order
+                            cursor.callproc('sp_createOrders',(orderInfo['cardType'], num,sellerTupleMonPerCard,
+                                                    timestamp, user_id, status, orderType, referID))
+                            #Update the r
+                            conn.commit()
+                            cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
+                            data = cursor.fetchall()
+                            order_id = data[0][0]
+                            # Update the refer sell order
+                            cursor.execute("UPDATE orders SET status = \'completed\', referId = %s where order_id = %s" %(order_id,referID))
+                            conn.commit()
+                            
+                            #### <whole proccess function End> 
+                            if (leaveflag == True):
+                                data={
+                                        "response":'Order Process successfully !',
+                                        "orderStatus":status,
+                                        "order_id":order_id
+                                    }
+                                return response_self(data)
+                                break
+                            else : 
+                                pass
+
+                            # Update the seller in sell function
+                            # No more orders to buy break out while
+
+                            cursor.execute("SELECT * FROM orders where status = %s and orderType = %s " % ("\'pending\'", "\'buy\'"))
+                            BuyPending = cursor.fetchall()
+
+                            ## create a pending order if len = 0
+                            if len(BuyPending) == 0:
+                            # The card does not have buyer anymore 
+                                status = "pending"
+                                try:
+                                    referID = None
+                                    cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
+                                                                    timestamp, user_id, status, orderType,referID))
+
+                                    conn.commit()
+                                    cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
+                                    data = cursor.fetchall()
+                                    order_id = data[0][0]
+                                    print("Debug: ", order_id)
+
+                                    data={
+                                        "response":'Order Process successfully !',
+                                        "orderStatus":status,
+                                        "order_id":order_id
+                                    }
+                                    return response_self(data)
+                                except Exception as e:
+                                    data={
+                                        "response":'Error: ' + str(e)
+                                    }
+                                    return response_self(data)
+                        
+                        # Finish while loop
+                        print("Error: should already finish loop")
+                        # cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
+                                                        # timestamp, user_id, status, orderType))
+                        # cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance - %s WHERE user_id = %s ;" 
+                        #             % (orderInfo['cardType'],orderInfo['cardType'], orderInfo['num'],
+                        #                 orderInfo['num']*orderInfo['$perCard'],
+                        #                 user_id))
+                        # data = cursor.fetchall()
+
+                        # conn.commit()
+                        # cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
+                        # data = cursor.fetchall()
+                        # order_id = data[0][0]
+                        # print("Debug: ", order_id)
+
+                        data={
+                            "response":'Create Order successfully !',
+                            "orderStatus":status,
+                            "order_id":order_id
+                        }
+                        return response_self(data)
+                    except Exception as e:
+                        data={
+                            "response":'Error: ' + str(e)
+                        }
+                        return response_self(data)   
     else:
         data={
             "response":"Please login before buy action"
@@ -295,7 +397,6 @@ def buy():
             mimetype='application/json'
         )
         return response
-        # return 'Logged in as: ' + current_user.id + 'Login is_active:True'
 
 @app.route('/userHome/sell')
 @login_required
@@ -315,13 +416,9 @@ def sell():
                     # The card does not have sellter yet
                     status = "pending"
                     try:
+                        referId = None
                         cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
-                                                        timestamp, user_id, status, orderType))
-                        cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance - %s WHERE user_id = %s ;" 
-                                    % (orderInfo['cardType'],orderInfo['cardType'], orderInfo['num'],
-                                        orderInfo['num']*orderInfo['$perCard'],
-                                        user_id))
-                        # data = cursor.fetchall()
+                                                        timestamp, user_id, status, orderType,referId))
 
                         conn.commit()
                         cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
@@ -353,35 +450,93 @@ def sell():
                             buyerTuple = max(BuyPending, key=itemgetter(3))
                             buyerTupleNum = buyerTuple[2]
                             buyerTupleId = buyerTuple[5]
+                            buyerTupleMonPerCard = buyerTuple[3]
+                            # if else max find or not
                             if buyerTupleNum >= num:
                                 # Update the seller in sell function
-                                status = "completed"
-                                cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance + %s WHERE user_id = %s ;" 
-                                        % (orderInfo['cardType'],orderInfo['cardType'], num,
-                                            orderInfo['num']*orderInfo['$perCard'],
-                                            user_id))
-                                # Update the buyer in sell function
-                                cursor.execute("UPDATE asset SET %s = %s + %s, balance = balance - %s WHERE user_id = %s ;" 
-                                        % (orderInfo['cardType'],orderInfo['cardType'], num,
-                                            orderInfo['num']*orderInfo['$perCard'],
-                                            buyerTupleId))
-                                referID = buyerTuple[0][0]
-                                cursor.callproc('sp_createOrders',(orderInfo['cardType'], num,orderInfo['$perCard'],
-                                                        timestamp, user_id, status, orderType, referID))
-                                conn.commit()
-                                num -= 0
-                                break
+                                ordernumber = num
+                                leaveflag = True
+                                num = 0
                             else:
-                                cursor.execute("SELECT * FROM orders where status = %s and orderType = %s " % ("\'pending\'", "\'buy\'"))
-                                BuyPending = cursor.fetchall()
+                                leaveflag = False
+                                ordernumber = buyerTupleNum
+                                num -= buyerTupleNum
+
+                            #### <whole proccess function Start> 
+                            # Create a completed order    
+                            status = "completed"
+
+                            #### ------ Here has a problem how to decide the price ------ #
+                            cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance + %s WHERE user_id = %s ;" 
+                                    % (orderInfo['cardType'],orderInfo['cardType'], ordernumber,
+                                        orderInfo['num']*buyerTupleMonPerCard,
+                                        user_id))
+                            # Update the buyer in sell function
+
+                            cursor.execute("UPDATE asset SET %s = %s + %s, balance = balance - %s WHERE user_id = %s ;" 
+                                    % (orderInfo['cardType'],orderInfo['cardType'], num,
+                                        orderInfo['num']*buyerTupleMonPerCard,
+                                        buyerTupleId))
+                            referID = buyerTuple[0]
+                            # Create a sell order
+                            cursor.callproc('sp_createOrders',(orderInfo['cardType'], num,buyerTupleMonPerCard,
+                                                    timestamp, user_id, status, orderType, referID))
+                            #Update the refer buy order
+                            conn.commit()
+                            cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
+                            data = cursor.fetchall()
+                            order_id = data[0][0]
+                            cursor.execute("UPDATE orders SET status = \'completed\', referId = %s where order_id = %s" %(order_id,referID))
+                            conn.commit()
+                            
+                            #### <whole proccess function End> 
+                            if (leaveflag == True):
+                                break
+                            else : 
+                                pass
+
+                            # Update the seller in sell function
+                            # No more orders to buy break out while
+
+                            cursor.execute("SELECT * FROM orders where status = %s and orderType = %s " % ("\'pending\'", "\'buy\'"))
+                            BuyPending = cursor.fetchall()
+
+                            ## create a pending order if len = 0
+                            if len(BuyPending) == 0:
+                            # The card does not have buyer anymore 
+                                status = "pending"
+                                try:
+                                    referID = None
+                                    cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
+                                                                    timestamp, user_id, status, orderType,referID))
+
+                                    conn.commit()
+                                    cursor.execute("SELECT order_id from orders ORDER BY order_id DESC LIMIT 1;")
+                                    data = cursor.fetchall()
+                                    order_id = data[0][0]
+                                    print("Debug: ", order_id)
+
+                                    data={
+                                        "response":'Create Order successfully !',
+                                        "orderStatus":status,
+                                        "order_id":order_id
+                                    }
+                                    return response_self(data)
+                                except Exception as e:
+                                    data={
+                                        "response":'Error: ' + str(e)
+                                    }
+                                    return response_self(data)  
+
+
 
                         
                         # cursor.callproc('sp_createOrders',(orderInfo['cardType'],orderInfo['num'],orderInfo['$perCard'],
                                                         # timestamp, user_id, status, orderType))
-                        cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance - %s WHERE user_id = %s ;" 
-                                    % (orderInfo['cardType'],orderInfo['cardType'], orderInfo['num'],
-                                        orderInfo['num']*orderInfo['$perCard'],
-                                        user_id))
+                        # cursor.execute("UPDATE asset SET %s = %s - %s, balance = balance - %s WHERE user_id = %s ;" 
+                        #             % (orderInfo['cardType'],orderInfo['cardType'], orderInfo['num'],
+                        #                 orderInfo['num']*orderInfo['$perCard'],
+                        #                 user_id))
                         # data = cursor.fetchall()
 
                         # conn.commit()
@@ -401,13 +556,6 @@ def sell():
                             "response":'Error: ' + str(e)
                         }
                         return response_self(data)   
-                    ## Need adjust and coding
-                    # status = 'pending'
-                    data={
-                        "user":current_user.id,
-                        "Login_is_active":True
-                    }
-                    return response_self(data)
     else:
         data={
             "response":"Please login before buy action"
@@ -418,7 +566,6 @@ def sell():
             mimetype='application/json'
         )
         return response
-        # return 'Logged in as: ' + current_user.id + 'Login is_active:True'
 
 @app.route('/logout')  
 def logout():  

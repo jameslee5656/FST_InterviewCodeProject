@@ -37,10 +37,24 @@ create table orders (
   status VARCHAR(45) NOT NULL,
   PRIMARY KEY (order_id),
   FOREIGN KEY (user_id) REFERENCES fst_user(user_id),
-  orderType VARCHAR(45) NOT NULL
+  orderType VARCHAR(45) NOT NULL,
+  referId BIGINT FOREIGN KEY REFERENCES orders(order_id)
+
 );
+
+ALTER TABLE orders  FOREIGN KEY REFERENCES orders(order_id);
+ALTER TABLE
+  orders
+ADD
+  referId BIGINT
+  FOREIGN KEY (referId) REFERENCES orders(order_id);
 
 SELECT pikachu FROM asset
 
 GRANT SELECT, UPDATE ON asset TO 'fstadmin'@'localhost';
 flush privileges;
+
+## Roll back asset
+TRUNCATE TABLE orders;
+UPDATE asset Set balance = 10000 , pikachu = 50;
+ALTER TABLE orders AUTO_INCREMENT = 1;
