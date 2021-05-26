@@ -1,0 +1,26 @@
+name: FST_CodeProject
+channels:
+  - defaults
+dependencies:
+  - ca-certificates=2021.4.13
+  # - certifi=2020.12.5
+  # - click=8.0.0
+  - flask=1.1.2
+  # - itsdangerous=2.0.1
+  # - jinja2=3.0.0
+  # - libcxx=10.0.0
+  # - libffi=3.3
+  # - markupsafe=2.0.0
+  # - ncurses=6.2
+  # - openssl=1.1.1k
+  - pip=21.0.1
+  - python=3.6.13
+  # - readline=8.1
+  # - setuptools=52.0.0
+  # - sqlite=3.35.4
+  # - tk=8.6.10
+  # - werkzeug=1.0.1
+  # - wheel=0.36.2
+  # - xz=5.2.5
+  # - zlib=1.2.11
+prefix: /Applications/anaconda3/envs/FST_CodeProject
