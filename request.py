@@ -3,7 +3,6 @@ from random import seed
 from random import random,randint
 
 
-
 users = {'fstadmin@localhost': {'password': 'P@ssw0rdJames'}}  
 data = dict(
     user='fstadmin',

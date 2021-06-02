@@ -80,9 +80,6 @@ def check_db(userid):
 
 @app.route('/signup', methods=['POST'])  
 def signup():  
-    """  
- 官網git很給力的寫了一個login的頁面，在GET的時候回傳渲染     
- """   
     if request.method == 'POST':  
         # print(request.json)
         data = request.json
@@ -219,6 +216,23 @@ def view():
             "user":current_user.id,
             "Login_is_active":True
         }
+        with closing(mysql.connect()) as conn:
+            with closing( conn.cursor() ) as cursor:
+                cursor.execute("SELECT * FROM asset where user_id = %s ",current_user.id)
+                db_check = cursor.fetchall()
+                # UserObject = User(db_check[0][0], db_check[0][1])
+                if db_check != None:
+                    # print(db_check)
+                    data['asset_id'] = db_check[0][0]
+                    data['balance'] = db_check[0][2]
+                    data['pikachu'] = db_check[0][3]
+                    data['bulbasaur'] = db_check[0][4]
+                    data['charmander'] = db_check[0][5]
+                    data['squirtle'] = db_check[0][6]
+
+                else:
+                    pass
+
         response = app.response_class(
             response=json.dumps(data),
             status=200,
